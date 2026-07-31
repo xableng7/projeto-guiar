@@ -12,7 +12,7 @@ st.caption("Gestão Urbana de Impactos e Avaliação de RIV")
 # 1. Pegue o link da sua planilha e copie o ID (aquela parte longa entre /d/ e /edit)
 # 2. Substitua apenas o texto SEU_ID_DA_PLANILHA_AQUI abaixo:
 SHEET_ID = "1vTX7AnbwzET6w_qGqCvUrAX7AArVEa-9YsmK3e7TM08VqI5daA6ifo1bJDRrGL7tTBpGmk7jbFgvFcm"
-URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+URL = f"https://docs.google.com/spreadsheets/d/13udSBEkOIarsGN0SMcdKgYFr3SAH6eMLA9X_Bd6ruvY/export?format=csv"
 
 @st.cache_data(ttl=60)
 def load_data(url):
