@@ -9,7 +9,7 @@ st.title("🏙️ GUIAR - Maringá/PR")
 st.caption("Gestão Urbana de Impactos e Avaliação de RIV")
 
 # --- CONEXÃO COM O BANCO DE DADOS ---
-URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTX7AnbwzET6w_qGqCvUrAX7AArVEa-9YsmK3e7TM08VqI5daA6ifo1bJDRrGL7tTBpGmk7jbFgvFcm/pub?gid=0&single=true&output=csv"
+URL = "https://docs.google.com/spreadsheets/d/13udSBEkOIarsGN0SMcdKgYFr3SAH6eMLA9X_Bd6ruvY/export?format=csv"
 
 try:
     # Lendo os dados da Planilha
