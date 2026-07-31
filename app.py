@@ -64,9 +64,14 @@ try:
     # --- MAPA ---
     if 'Latitude' in df.columns and 'Longitude' in df.columns:
         st.write("### 📍 Localização das Medidas")
-        map_df = df.dropna(subset=['Latitude', 'Longitude'])
+        # Criamos uma cópia apenas para o mapa com os nomes que o sistema exige
+        map_df = df.dropna(subset=['Latitude', 'Longitude']).copy()
+        map_df = map_df.rename(columns={'Latitude': 'lat', 'Longitude': 'lon'})
+        
         if not map_df.empty:
-            st.map(map_df[['Latitude', 'Longitude']])
+            st.map(map_df[['lat', 'lon']])
+        else:
+            st.info("Preencha a Latitude e Longitude na planilha para ver os pontos no mapa.")
 
 except Exception as e:
     st.error(f"Erro ao carregar dados: {e}")
