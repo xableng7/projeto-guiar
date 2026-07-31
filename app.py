@@ -48,10 +48,9 @@ st.markdown("""
         font-weight: bold;
     }
     </style>
-    """, unsafe_allow_name=True)
+    """, unsafe_allow_html=True) # CORRIGIDO AQUI
 
 # --- CONEXÃO COM DADOS ---
-# Use o SEU ID da planilha abaixo
 SHEET_ID = "1vTX7AnbwzET6w_qGqCvUrAX7AArVEa-9YsmK3e7TM08VqI5daA6ifo1bJDRrGL7tTBpGmk7jbFgvFcm"
 URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
@@ -59,7 +58,8 @@ URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 def load_data():
     try:
         data = pd.read_csv(URL)
-        data['Data_Mov'] = pd.to_datetime(data['Data_Mov'], dayfirst=True, errors='coerce').dt.date
+        if not data.empty and 'Data_Mov' in data.columns:
+            data['Data_Mov'] = pd.to_datetime(data['Data_Mov'], dayfirst=True, errors='coerce').dt.date
         return data
     except:
         return pd.DataFrame()
@@ -77,19 +77,21 @@ with st.container():
 
 st.divider()
 
-# --- LOGICA DE PRAZOS ---
+# --- LÓGICA DE PRAZOS ---
 hoje = date.today()
 def calcular_gestao(row):
-    if pd.isna(row['Data_Mov']): return "⚠️ DADO INVÁLIDO"
+    if pd.isna(row.get('Data_Mov')): return "⚠️ DADO INVÁLIDO"
     dias = (hoje - row['Data_Mov']).days
-    if str(row['Sobrestado']).strip().upper() == "SIM":
+    if str(row.get('Sobrestado')).strip().upper() == "SIM":
         return "⏸️ SOBRESTADO"
     return f"🚨 ATRASADO ({dias} dias)" if dias > 30 else f"✅ EM DIA ({dias} dias)"
 
-if not df.empty:
+if not df.empty and 'Data_Mov' in df.columns:
     df['SLA'] = df.apply(calcular_gestao, axis=1)
+else:
+    df = pd.DataFrame(columns=['ID_RIV', 'N_SEI', 'Empreendedor', 'Responsavel', 'Status', 'Data_Mov', 'Sobrestado', 'SLA'])
 
-# --- MENU LATERAL (CONFIGURAÇÕES) ---
+# --- MENU LATERAL ---
 with st.sidebar:
     st.header("⚙️ Configurações")
     perfil = st.radio("Perfil de Acesso", ["Diretor (Master)", "Técnico", "Estagiário"])
@@ -97,7 +99,7 @@ with st.sidebar:
     st.info(f"Logado como: **{perfil}**")
     st.write(f"Data atual: {hoje.strftime('%d/%m/%Y')}")
 
-# --- NAVEGAÇÃO POR ABAS (CARA DE SOFTWARE) ---
+# --- ABAS ---
 tab_painel, tab_lista, tab_mapa, tab_legal = st.tabs([
     "📊 Painel Geral", 
     "📝 Gestão Processual", 
@@ -105,11 +107,9 @@ tab_painel, tab_lista, tab_mapa, tab_legal = st.tabs([
     "📋 Base Legal"
 ])
 
-# --- CONTEÚDO DAS ABAS ---
-if df.empty:
-    st.error("Erro ao conectar com a Base de Dados. Verifique a Planilha.")
+if df.empty or len(df) == 0:
+    st.warning("A base de dados está vazia ou inacessível. Por favor, verifique sua planilha no Google Sheets.")
 else:
-    # TAB 1: PAINEL GERAL
     with tab_painel:
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Total Protocolados", len(df))
@@ -118,38 +118,35 @@ else:
         c4.metric("Concluídos", len(df[df['Status'] == "Concluído"]))
         
         st.subheader("Distribuição por Responsável")
-        st.bar_chart(df['Responsavel'].value_counts())
+        if 'Responsavel' in df.columns:
+            st.bar_chart(df['Responsavel'].value_counts())
 
-    # TAB 2: GESTÃO PROCESSUAL
     with tab_lista:
         st.subheader("Lista Ativa de Processos RIV")
-        # Filtros rápidos
-        f_resp = st.multiselect("Filtrar Responsável:", df['Responsavel'].unique())
-        temp_df = df[df['Responsavel'].isin(f_resp)] if f_resp else df
+        if 'Responsavel' in df.columns:
+            f_resp = st.multiselect("Filtrar Responsável:", df['Responsavel'].unique())
+            temp_df = df[df['Responsavel'].isin(f_resp)] if f_resp else df
+        else:
+            temp_df = df
         
-        st.dataframe(
-            temp_df[['ID_RIV', 'N_SEI', 'Empreendedor', 'Responsavel', 'Status', 'SLA', 'Motivo_Pausa']], 
-            use_container_width=True, 
-            hide_index=True
-        )
+        st.dataframe(temp_df, use_container_width=True, hide_index=True)
 
-    # TAB 3: MAPA DE IMPACTOS
     with tab_mapa:
         st.subheader("Geolocalização das Medidas Mitigadoras")
         if 'Latitude' in df.columns and 'Longitude' in df.columns:
             map_df = df.dropna(subset=['Latitude', 'Longitude']).copy()
             map_df = map_df.rename(columns={'Latitude': 'lat', 'Longitude': 'lon'})
-            st.map(map_df[['lat', 'lon']], zoom=12)
+            if not map_df.empty:
+                st.map(map_df[['lat', 'lon']], zoom=12)
+            else:
+                st.info("Adicione coordenadas na planilha para visualizar o mapa.")
 
-    # TAB 4: BASE LEGAL (EXCLUSIVO DIRETORIA)
     with tab_legal:
         st.subheader("Documentação de Referência")
         st.markdown("""
-        - **Lei Complementar nº 1.381/2023:** Critérios de impacto por porte.
-        - **Plano Diretor de Maringá:** Diretrizes de uso e ocupação.
-        - **Normas SEMOB:** Padrões para sinalização e semafórica.
+        - **Lei Complementar nº 1.381/2023:** Critérios de impacto por porte em Maringá.
+        - **Plano Diretor:** Diretrizes municipais.
         """)
 
-# --- RODAPÉ ---
 st.markdown("---")
-st.caption("Sistema GUIAR v2.0 - Desenvolvido para a Secretaria de Urbanismo e Habitação | Maringá - PR")
+st.caption("Sistema GUIAR v2.0 | Maringá - PR")
