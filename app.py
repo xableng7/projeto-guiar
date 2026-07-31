@@ -10,7 +10,7 @@ st.caption("Gestão Urbana de Impactos e Avaliação de RIV")
 
 # --- CONEXÃO COM O BANCO DE DADOS (LINHA IMPORTANTE) ---
 # SUBSTITUA O LINK ABAIXO PELO SEU LINK DO GOOGLE SHEETS (CSV)
-url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTX7AnbwzET6w_qGqCvUrAX7AaRVEa-9YsmK3e7TM08VqI5daA6ifo1bJDRrGL7tTBpGmK7jbFgvFcm/pub?output=csv" 
+url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTX7AnbwzET6w_qGqCvUrAX7AaRVEa-9YsmK3e7TM08VqI5daA6ifo1bJDRrGL7tTBpGmK7jbFgvFcm/pub?gid=0&single=true&output=csv" 
 
 try:
     # Lendo os dados da Planilha
