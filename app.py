@@ -9,30 +9,30 @@ st.title("🏙️ GUIAR - Maringá/PR")
 st.caption("Gestão Urbana de Impactos e Avaliação de RIV")
 
 # --- CONEXÃO COM O BANCO DE DADOS ---
-# COLOQUE O LINK QUE VOCÊ TESTOU E QUE BAIXOU O ARQUIVO ABAIXO:
-URL = "https://docs.google.com/spreadsheets/d/13udSBEkOIarsGN0SMcdKgYFr3SAH6eMLA9X_Bd6ruvY/export?format=csv"
+# 1. Pegue o link da sua planilha e copie o ID (aquela parte longa entre /d/ e /edit)
+# 2. Substitua apenas o texto SEU_ID_DA_PLANILHA_AQUI abaixo:
+SHEET_ID = "1vTX7AnbwzET6w_qGqCvUrAX7AArVEa-9YsmK3e7TM08VqI5daA6ifo1bJDRrGL7tTBpGmk7jbFgvFcm"
+URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
-@st.cache_data(ttl=60) # Atualiza os dados a cada 60 segundos
+@st.cache_data(ttl=60)
 def load_data(url):
     return pd.read_csv(url)
 
 try:
     df = load_data(URL)
     
-    # Limpeza básica: Garante que as colunas existam antes de usar
-    colunas_obrigatorias = ['ID_RIV', 'Data_Mov', 'Sobrestado', 'Responsavel']
-    for col in colunas_obrigatorias:
-        if col not in df.columns:
-            st.error(f"A coluna '{col}' não foi encontrada na planilha. Verifique o cabeçalho.")
-            st.stop()
-
+    # Padronização de datas
     df['Data_Mov'] = pd.to_datetime(df['Data_Mov'], dayfirst=True, errors='coerce').dt.date
     hoje = date.today()
 
+    # Lógica de Gestão (30 dias / Sobrestado)
     def calcular_gestao(row):
         if pd.isna(row['Data_Mov']): return "⚠️ DATA INVÁLIDA"
         dias = (hoje - row['Data_Mov']).days
-        if str(row['Sobrestado']).strip().lower() == "sim":
+        # Verifica se está sobrestado (independente de maiúsculas/minúsculas)
+        is_sobrestado = str(row['Sobrestado']).strip().upper() == "SIM"
+        
+        if is_sobrestado:
             return "⏸️ SOBRESTADO"
         elif dias > 30:
             return f"🚨 ATRASADO ({dias} dias)"
@@ -44,86 +44,30 @@ try:
     # --- DASHBOARD ---
     c1, c2, c3 = st.columns(3)
     c1.metric("Total de RIVs", len(df))
-    c2.metric("Atrasos (>30 dias)", len(df[df['Status_Prazo'].str.contains("🚨")]))
-    c3.metric("Pausados/Sobrestados", len(df[str(df['Sobrestado']).strip().lower() == "sim"]))
+    atrasados = len(df[df['Status_Prazo'].str.contains("🚨")])
+    c2.metric("Atrasos (>30 dias)", atrasados)
+    pausados = len(df[df['Status_Prazo'] == "⏸️ SOBRESTADO"])
+    c3.metric("Sobrestados", pausados)
 
-    # --- FILTRO ---
+    # --- FILTRO LATERAL ---
     st.sidebar.header("Filtros")
-    tecnicos = df['Responsavel'].unique()
-    tecnico_sel = st.sidebar.multiselect("Filtrar por Responsável", tecnicos)
-    if tecnico_sel:
-        df = df[df['Responsavel'].isin(tecnico_sel)]
+    if 'Responsavel' in df.columns:
+        tecnicos = df['Responsavel'].unique()
+        sel = st.sidebar.multiselect("Filtrar por Técnico", tecnicos)
+        if sel:
+            df = df[df['Responsavel'].isin(sel)]
 
-    st.write("### 📋 Lista de Gestão Processual")
+    # --- EXIBIÇÃO ---
+    st.write("### 📋 Fluxo Processual GUIAR")
     st.dataframe(df, use_container_width=True, hide_index=True)
 
+    # --- MAPA ---
     if 'Latitude' in df.columns and 'Longitude' in df.columns:
-        st.write("### 📍 Mapa de Medidas em Maringá")
-        st.map(df.dropna(subset=['Latitude', 'Longitude'])[['Latitude', 'Longitude']])
+        st.write("### 📍 Localização das Medidas")
+        map_df = df.dropna(subset=['Latitude', 'Longitude'])
+        if not map_df.empty:
+            st.map(map_df[['Latitude', 'Longitude']])
 
 except Exception as e:
-    st.error(f"Erro ao carregar os dados: {e}")import streamlit as st
-import pandas as pd
-from datetime import datetime, date
-
-# --- CONFIGURAÇÃO GUIAR ---
-st.set_page_config(page_title="Programa GUIAR - Maringá", layout="wide")
-
-st.title("🏙️ GUIAR - Maringá/PR")
-st.caption("Gestão Urbana de Impactos e Avaliação de RIV")
-
-# --- CONEXÃO COM O BANCO DE DADOS ---
-# COLOQUE O LINK QUE VOCÊ TESTOU E QUE BAIXOU O ARQUIVO ABAIXO:
-URL = "https://docs.google.com/spreadsheets/d/SEU_ID_AQUI/export?format=csv"
-
-@st.cache_data(ttl=60) # Atualiza os dados a cada 60 segundos
-def load_data(url):
-    return pd.read_csv(url)
-
-try:
-    df = load_data(URL)
-    
-    # Limpeza básica: Garante que as colunas existam antes de usar
-    colunas_obrigatorias = ['ID_RIV', 'Data_Mov', 'Sobrestado', 'Responsavel']
-    for col in colunas_obrigatorias:
-        if col not in df.columns:
-            st.error(f"A coluna '{col}' não foi encontrada na planilha. Verifique o cabeçalho.")
-            st.stop()
-
-    df['Data_Mov'] = pd.to_datetime(df['Data_Mov'], dayfirst=True, errors='coerce').dt.date
-    hoje = date.today()
-
-    def calcular_gestao(row):
-        if pd.isna(row['Data_Mov']): return "⚠️ DATA INVÁLIDA"
-        dias = (hoje - row['Data_Mov']).days
-        if str(row['Sobrestado']).strip().lower() == "sim":
-            return "⏸️ SOBRESTADO"
-        elif dias > 30:
-            return f"🚨 ATRASADO ({dias} dias)"
-        else:
-            return f"✅ EM DIA ({dias} dias)"
-
-    df['Status_Prazo'] = df.apply(calcular_gestao, axis=1)
-
-    # --- DASHBOARD ---
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total de RIVs", len(df))
-    c2.metric("Atrasos (>30 dias)", len(df[df['Status_Prazo'].str.contains("🚨")]))
-    c3.metric("Pausados/Sobrestados", len(df[str(df['Sobrestado']).strip().lower() == "sim"]))
-
-    # --- FILTRO ---
-    st.sidebar.header("Filtros")
-    tecnicos = df['Responsavel'].unique()
-    tecnico_sel = st.sidebar.multiselect("Filtrar por Responsável", tecnicos)
-    if tecnico_sel:
-        df = df[df['Responsavel'].isin(tecnico_sel)]
-
-    st.write("### 📋 Lista de Gestão Processual")
-    st.dataframe(df, use_container_width=True, hide_index=True)
-
-    if 'Latitude' in df.columns and 'Longitude' in df.columns:
-        st.write("### 📍 Mapa de Medidas em Maringá")
-        st.map(df.dropna(subset=['Latitude', 'Longitude'])[['Latitude', 'Longitude']])
-
-except Exception as e:
-    st.error(f"Erro ao carregar os dados: {e}")
+    st.error(f"Erro ao carregar dados: {e}")
+    st.info("Verifique se a planilha está compartilhada como 'Qualquer pessoa com o link' e se as colunas estão corretas.")
